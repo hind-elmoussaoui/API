@@ -1,70 +1,92 @@
 const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
-
+var bodyParser = require('body-parser')
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
+// app.use(express.json());
 
-// Connexion à MongoDB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('Connecté à la base de données'))
-    .catch((error) => console.log('Erreur de connexion :', error));
+const PORT = process.env.PORT || 3001;
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://hindelmoussaoui:hindelmoussaoui@cluster0.omwqk.mongodb.net/blog?retryWrites=true&w=majority&appName=Cluster0';
 
-// Importer le modèle User
-const User = require('./models/User');
+// ✅ Connexion à MongoDB
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('✅ Connecté à MongoDB'))
+    .catch((error) => console.error('❌ Erreur de connexion :', error.message));
 
-// Routes
+// ✅ Importer le modèle User
+const User = require('./models/User.js');
 
-// GET: Retourner tous les utilisateurs
-app.get('/utilisateurs', async (req, res) => {
+// Liste des utilisateurs à insérer
+const users = [
+    { name: "Alice", email: "alice@example.com" },
+    { name: "Bob", email: "bob@example.com" },
+    { name: "Charlie", email: "charlie@example.com" }
+];
+
+// create les utilisateurs dans la base de données
+User.create(users)
+    .then(() => {
+        console.log("Utilisateurs ajoutés avec succès !");
+        // mongoose.connection.close();
+    })
+    .catch(err => console.error("Erreur lors de l'ajout des utilisateurs", err));
+
+// 📌 GET: Retourner tous les utilisateurs
+app.get('/find', async (req, res) => {
     try {
         const utilisateurs = await User.find();
-        res.json(utilisateurs);
+        console.log(utilisateurs)
+        res.send(utilisateurs);
+        
     } catch (err) {
-        res.status(400).send('Erreur lors de la récupération des utilisateurs');
+        res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
     }
 });
 
-// POST: Ajouter un nouvel utilisateur
-app.post('/utilisateurs', async (req, res) => {
-    const { nom, email } = req.body;
-    const utilisateur = new User({ nom, email });
+// 📌 POST: Ajouter un nouvel utilisateur
+app.post('/User', async (req, res) => {
+    const { name, email } = req.body;
+    if (!name || !email) {
+        return res.status(400).json({ message: "❌ Le nom et l'email sont requis" });
+    }
 
     try {
+        const utilisateur = new User({ name, email });
         await utilisateur.save();
         res.status(201).json(utilisateur);
     } catch (err) {
-        res.status(400).send('Erreur lors de l\'ajout de l\'utilisateur');
+        res.status(400).json({ message: '❌ Erreur lors de l\'ajout de l\'utilisateur', error: err.message });
     }
 });
 
-// PUT: Modifier un utilisateur par ID
-app.put('/utilisateurs/:id', async (req, res) => {
+// 📌 PUT: Modifier un utilisateur par ID
+app.put('/User/:id', async (req, res) => {
     try {
         const utilisateur = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!utilisateur) {
-            return res.status(404).send('Utilisateur non trouvé');
+            return res.status(404).json({ message: '❌ Utilisateur non trouvé' });
         }
         res.json(utilisateur);
     } catch (err) {
-        res.status(400).send('Erreur lors de la mise à jour de l\'utilisateur');
+        res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
     }
 });
 
-// DELETE: Supprimer un utilisateur par ID
-app.delete('/utilisateurs/:id', async (req, res) => {
+// 📌 DELETE: Supprimer un utilisateur par ID
+app.delete('/User/:id', async (req, res) => {
     try {
         const utilisateur = await User.findByIdAndDelete(req.params.id);
         if (!utilisateur) {
-            return res.status(404).send('Utilisateur non trouvé');
+            return res.status(404).json({ message: '❌ Utilisateur non trouvé' });
         }
         res.status(204).send();
     } catch (err) {
-        res.status(400).send('Erreur lors de la suppression de l\'utilisateur');
+        res.status(500).json({ message: '❌ Erreur serveur', error: err.message });
     }
 });
 
-// Démarrer le serveur
-app.listen(process.env.PORT, () => {
-    console.log(`Serveur démarré sur le port ${process.env.PORT}`);
+// 🚀 Démarrer le serveur
+app.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
 });

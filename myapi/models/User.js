@@ -1,9 +1,9 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
+// Définition du schéma
 const userSchema = new mongoose.Schema({
-    nom: { type: String, required: true },
-    email: { type: String, required: true, unique: true }
+    name: String,
+    email: String
 });
 
-const User = mongoose.model('User', userSchema);
-module.exports = User;
+module.exports = mongoose.model('User', userSchema);
